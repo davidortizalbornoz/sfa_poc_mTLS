@@ -1,0 +1,8 @@
+# IdP BCI — puerto 5050
+docker compose -f docker-compose.bci-idp.yml up -d
+
+# Bajar (conserva datos)
+docker compose -f docker-compose.bci-idp.yml down
+
+# Bajar y eliminar volúmenes (reset total)
+docker compose -f docker-compose.bci-idp.yml down -v

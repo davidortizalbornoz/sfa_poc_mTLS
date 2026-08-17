@@ -1,0 +1,12 @@
+{
+  "keys": [
+    {
+      "kid": "banco-estado-4cd1ea3cca9c",
+      "kty": "RSA",
+      "alg": "PS256",
+      "use": "sig",
+      "e": "AQAB",
+      "n": "h6lfKtVCNhTXHPY-fpg03uegByncFKzaKZcaN_M3hETK5b4qE7nCC3vA4xMmhUxsEc5_HL7GftLAEndjorwKABXjLU2fRcDkNmkuMlzyb2ZlP5RDHgBkPXEtQ5gZsasNmJXkJEvLmiZw8cYUJw7n5_kmQtxfut-GJ8ERpI91gtuUt8LzkjneCLPt1pvVH2JUOAj4VFdpHQS7npdNnVZBIm8D-AGvK0UtJ3l8tF-TvVgXGDZ_7W-vwba5SFc699JvNL4UC6LxIvjNa5nrTbNOK4chEA3hunzA341Qp1yWCX0KwM4u9d_hr1x1QW_UMtELHmrIyLAQJoWGrMgflWrkPw"
+    }
+  ]
+}

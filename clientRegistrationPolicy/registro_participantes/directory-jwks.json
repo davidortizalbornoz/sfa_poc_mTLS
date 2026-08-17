@@ -1,0 +1,12 @@
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "kid": "sfa-poc-directory-1",
+      "use": "sig",
+      "alg": "PS256",
+      "n": "xpIqtm9BLJrlTyKoaXZXjmKiBzPa38YOqjRLbMC8GJO5KNMkHSAISS3BBj3ut__PbDe9Jjs6oxdOLa2O95t4-do3rfWH5FOla86trfy404CuNqOytWcd-nEZfldzaQr0CPkLg3lxh-C-GD9EJA3Bn7KDp_uxHzN8RG3YOHjnQ0HASpmLtTOPB6KnB5Rlcs8dtQdOBA0SE9GzEJHsZzURLhe7vLiGpQsnCC0LNhA1CiWW1CZ-oDYWQrUVfWujuYONN-D9bQKSrsID5zRp4_U24R_hJmvTaaE_Ru7ljD5r-pHnpE26yqfU3h9YjeVOuID4rmFH6ETrRAoheajaDHlAIQ",
+      "e": "AQAB"
+    }
+  ]
+}
