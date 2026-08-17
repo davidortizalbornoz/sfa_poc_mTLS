@@ -58,6 +58,9 @@ services:
       - "9000:9000"
     volumes:
       - ./keycloak/import/sfa-mtls-poc-realm.json:/opt/keycloak/data/import/sfa-mtls-poc-realm.json
+      - ./clientRegistrationPolicy/registro_participantes/directory-jwks.json:/opt/keycloak/data/test-directory-jwks.json:ro
+      - ./clientRegistrationPolicy/client-jwks:/opt/keycloak/data/client-jwks:ro
+      - ./clientRegistrationPolicy/target/sfa-software-statement-policy-1.0.0-SNAPSHOT.jar:/opt/keycloak/providers/sfa-software-statement-policy.jar:ro
     depends_on:
       postgres:
         condition: service_healthy

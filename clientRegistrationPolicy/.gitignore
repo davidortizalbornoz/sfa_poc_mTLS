@@ -1,4 +1,5 @@
 ssa.env
+target/
 registro_participantes/ca/root-ca.key
 registro_participantes/ca/root-ca.srl
 client-jwks/**/private.pem

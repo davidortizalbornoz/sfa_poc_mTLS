@@ -1324,7 +1324,7 @@
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
-      "serviceAccountsEnabled": false,
+      "serviceAccountsEnabled": true,
       "authorizationServicesEnabled": false,
       "fullScopeAllowed": false,
       "consentRequired": true,
@@ -1372,7 +1372,7 @@
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
-      "serviceAccountsEnabled": false,
+      "serviceAccountsEnabled": true,
       "authorizationServicesEnabled": false,
       "fullScopeAllowed": false,
       "consentRequired": true,
@@ -1633,6 +1633,30 @@
             "oidc-address-mapper",
             "saml-role-list-mapper",
             "oidc-usermodel-attribute-mapper"
+          ]
+        }
+      },
+      {
+        "id": "a1b2c3d4-e001-4000-8000-000000000009",
+        "name": "SFA Software Statement",
+        "providerId": "sfa-software-statement",
+        "subType": "anonymous",
+        "subComponents": {},
+        "config": {
+          "directory-jwks-uri": [
+            "file:/opt/keycloak/data/test-directory-jwks.json"
+          ],
+          "directory-issuer": [
+            "https://directorio-qa.finanzasabiertas.cl"
+          ],
+          "max-statement-age-seconds": [
+            "300"
+          ],
+          "signature-algorithm": [
+            "PS256"
+          ],
+          "poc-client-jwks-base-dir": [
+            "file:/opt/keycloak/data/client-jwks"
           ]
         }
       },

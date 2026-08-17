@@ -4,45 +4,75 @@ PAUTA DE EJECUCION PARA REGISTRO DE FINTECH A TRAVES DE DCR & SSA
 >>Definir contenidos para las variables en ssa.env
 
 SSA_ISSUER=https://directorio-qa.finanzasabiertas.cl
-SSA_SOFTWARE_ID=FINTECH-A
-SSA_ORGANISATION_ID="FINTECH-A INC"
-SSA_SOFTWARE_JWKS_URI=https://fintech-a.localtest.me/.well-known/jwks.json
-SSA_SOFTWARE_CLIENT_NAME="SFA POC - DCR + SSA"
-SSA_SOFTWARE_VERSION=2.4.0
+SSA_SOFTWARE_ID=LIDER-BCI
+SSA_ORGANISATION_ID="LIDER-BCI"
+SSA_SOFTWARE_JWKS_URI=https://fintech-lider-bci.localtest.me/.well-known/jwks.json
+SSA_SOFTWARE_CLIENT_NAME="SFA mTLS POC - DCR + SSA"
+SSA_SOFTWARE_VERSION=1.2.9
 SSA_REDIRECT_URIS=http://localhost:3000/callback
 SSA_JWT_KID=sfa-poc-directory-1
+
+>>COMPILAR PROVIDER KEYCLOAK (una vez o tras cambios en src/)
+
+./scripts/build-provider.sh
 
 >>GENERAR JWKS PARA FINTECHS
 
 Ext_DHOrtizA@CLFTCMYPC6YVNJ9 clientRegistrationPolicy % ./scripts/generate-client-jwks.sh
-client-jwks/FINTECH-A/jwks.json
-kid=fintech-a-1c8c825a868d
-private_key=client-jwks/FINTECH-A/private.pem
+client-jwks/LIDER-BCI/jwks.json
+kid=lider-bci-xxxxxxxxxxxx
+private_key=client-jwks/LIDER-BCI/private.pem
+transport_cert=client-jwks/LIDER-BCI/transport.crt
 _______________________________________________________________________
 
 
 >>GENERAR SSA PARA REGISTRO DE FINTECH
 Ext_DHOrtizA@CLFTCMYPC6YVNJ9 clientRegistrationPolicy % ./scripts/generate-test-ssa.sh
 
-eyJhbGciOiJQUzI1NiIsImtpZCI6InNmYS1wb2MtZGlyZWN0b3J5LTEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2RpcmVjdG9yaW8tcWEuZmluYW56YXNhYmllcnRhcy5jbCIsImlhdCI6MTc4NjA1Mjc0MCwic29mdHdhcmVfaWQiOiJGSU5URUNILUEiLCJvcmdhbmlzYXRpb25faWQiOiJGSU5URUNILUEgSU5DIiwic29mdHdhcmVfandrc191cmkiOiJodHRwczovL2ZpbnRlY2gtYS5sb2NhbHRlc3QubWUvLndlbGwta25vd24vandrcy5qc29uIiwic29mdHdhcmVfY2xpZW50X25hbWUiOiJTRkEgUE9DIC0gRENSICsgU1NBIiwicmVkaXJlY3RfdXJpcyI6WyJodHRwOi8vbG9jYWxob3N0OjMwMDAvY2FsbGJhY2siXSwic29mdHdhcmVfdmVyc2lvbiI6IjIuNC4wIn0.DY8Vtv8-sbnQ8MepHtp7pw2otqZ8_dfYEti8ovhofh41wOraOlCdadz7W_SCPNrwHsqPHYQg1NLt_cWL_eUeVNIrTSrq9TXzsZmgJYENByut1-mXB1fQhezsTsPS2GYxjXYK9_ZZ7tCnyvca1lY7gtl9yJvvXIJmEobSNXkcf-GDrnJzf54HwTQgtWAkIAu7PTJuoXYTSXh-yDOuXJ9YefQDN1N91HPnKErd8ZG-V7i9WUpw87waMnN4SV8a-DujljdlD2SnMs4muv3C9_acDJQnvCKDqm8rM4D4y06ybBj840-WR5C2D6i5CVReuGYME0Sci0nlbvXdw9fwH3dLxQ
+eyJhbGciOiJQUzI1NiIs...
 guardado en registro_participantes/sample-software-statement.jwt
 
 _______________________________________________________________________
 
 
->> REGISTRO DE FINTECH EN AUTHORIZATION SERVER
-curl --location 'http://127.0.0.1:8080/realms/sfa-poc/clients-registrations/openid-connect' \
+>> REGISTRO DE FINTECH EN AUTHORIZATION SERVER (realm sfa-mtls-poc)
+Perfil TPP mTLS/X509: autenticacion en /token via certificado de transporte (tls_client_auth).
+Incluye client_credentials para M2M sin client_assertion ni private_key_jwt.
+
+curl --location 'http://127.0.0.1:8080/realms/sfa-mtls-poc/clients-registrations/openid-connect' \
 --header 'Content-Type: application/json' \
 --header 'X-Software-Statement: $SSA' \
 --data '{
-    "grant_types": ["client_credentials", "authorization_code", "refresh_token"],
+    "grant_types": ["authorization_code", "refresh_token", "client_credentials"],
     "response_types": ["code"],
-    "token_endpoint_auth_method": "private_key_jwt",
-    "jwks_uri": "https://fintech-a.localtest.me/.well-known/jwks.json",
+    "token_endpoint_auth_method": "tls_client_auth",
+    "tls_client_auth_subject_dn": "CN=LIDER-BCI,O=LIDER-BCI,C=CL",
+    "tls_client_certificate_bound_access_tokens": true,
     "redirect_uris": ["http://localhost:3000/callback"],
     "scope": "accounts:read"
   }'
 
+El tls_client_auth_subject_dn debe coincidir con el Subject de transport.crt:
+  openssl x509 -in client-jwks/LIDER-BCI/transport.crt -noout -subject
 
-Procurar que el contenido de la variable SSA_SOFTWARE_JWKS_URI sea el mismo en "request.jwks_uri"
-SSA_SOFTWARE_JWKS_URI=https://fintech-a.localtest.me/.well-known/jwks.json
+_______________________________________________________________________
+
+
+>> TOKEN client_credentials CON CERTIFICADO X509 (sin client_assertion)
+Requiere que el endpoint /token exija mTLS y Keycloak valide el certificado contra x509.subjectdn.
+En produccion suele haber un reverse proxy (Envoy/Nginx) que termina TLS y reenvia el certificado.
+
+curl --cert client-jwks/LIDER-BCI/transport.crt \
+     --key client-jwks/LIDER-BCI/transport.key \
+     --cacert registro_participantes/ca/root-ca.crt \
+     --location 'https://<host-mtls>/realms/sfa-mtls-poc/protocol/openid-connect/token' \
+     --header 'Content-Type: application/x-www-form-urlencoded' \
+     --data-urlencode 'grant_type=client_credentials' \
+     --data-urlencode 'client_id=LIDER-BCI' \
+     --data-urlencode 'scope=accounts:read'
+
+Notas:
+- No se envia client_assertion ni client_secret: la autenticacion es el certificado TLS.
+- tls_client_certificate_bound_access_tokens=true ata el access token al certificado presentado.
+- Keycloak en docker-compose actual (HTTP :8080) no termina mTLS; esta llamada aplica cuando
+  el AS/Gateway exponga HTTPS con clientAuth y confie en registro_participantes/ca/root-ca.crt.

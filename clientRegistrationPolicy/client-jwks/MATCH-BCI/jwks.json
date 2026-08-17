@@ -1,0 +1,12 @@
+{
+  "keys": [
+    {
+      "kid": "match-bci-5064b0062da4",
+      "kty": "RSA",
+      "alg": "PS256",
+      "use": "sig",
+      "e": "AQAB",
+      "n": "5DE7JWTfB-OsQoGzmQg1wxWQ4y0n10taI0Sv1_kJV3wf0WlNorbPLLt8imBMTuFlD5dIpgrjwX8L7Ndm3erkp233_Jd1qaEzf7WT4I3vFlMWXG17YiPTDa4nzb2jq5vOO9j_6XQh6i7TylVPJPVXmwMkNEhEQe8oXKVZHVbbS7epNqNyYhKZdx1KWZ-cOJQQTHKfvtz-h1URypPeM2EgBCK6dA274re0gWuqYbjUQCjl1ogygH_ZFyYXOHdCeBHGxzU_iXYA9OZEPNAzBftqFA1UxlcDSf5N57lnYh8WjOHW1evAvVMF1HLeCeLWseufCpzas6pY3Frgtj_1IesQ5Q"
+    }
+  ]
+}
