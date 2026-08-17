@@ -1284,7 +1284,103 @@
         "pkce.code.challenge.method": "S256",
         "tls.client.certificate.bound.access.tokens": "true",
         "x509.allow.regex.pattern.comparison": "false",
-        "subjectdn": "CN=tpp-demo,O=SFA POC,C=CL",
+        "x509.subjectdn": "CN=tpp-demo,O=SFA POC,C=CL",
+        "post.logout.redirect.uris": "http://localhost:3000/*",
+        "dpop.bound.access.tokens": "true"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "basic",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt",
+        "accounts:read",
+        "accounts:write",
+        "payments:read"
+      ]
+    },
+    {
+      "clientId": "BANCO-ESTADO",
+      "name": "BANCO ESTADO (mTLS / X509)",
+      "description": "TPP pre-configurado. Autenticaci\u00f3n tls_client_auth v\u00eda certificado X509 (transport.crt).",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-x509",
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:3000/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:3000"
+      ],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "fullScopeAllowed": false,
+      "consentRequired": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "tls.client.certificate.bound.access.tokens": "true",
+        "x509.allow.regex.pattern.comparison": "false",
+        "x509.subjectdn": "CN=BANCO-ESTADO,O=BANCO-ESTADO,C=CL",
+        "post.logout.redirect.uris": "http://localhost:3000/*",
+        "dpop.bound.access.tokens": "true"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "basic",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt",
+        "accounts:read",
+        "accounts:write",
+        "payments:read"
+      ]
+    },
+    {
+      "clientId": "LIDER-BCI",
+      "name": "LIDER BCI (mTLS / X509)",
+      "description": "TPP pre-configurado. Autenticaci\u00f3n tls_client_auth v\u00eda certificado X509 (transport.crt).",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-x509",
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:3000/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:3000"
+      ],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "fullScopeAllowed": false,
+      "consentRequired": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "tls.client.certificate.bound.access.tokens": "true",
+        "x509.allow.regex.pattern.comparison": "false",
+        "x509.subjectdn": "CN=LIDER-BCI,O=LIDER-BCI,C=CL",
         "post.logout.redirect.uris": "http://localhost:3000/*",
         "dpop.bound.access.tokens": "true"
       },
