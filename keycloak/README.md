@@ -1,108 +1,85 @@
-# Keycloak — Authorization Server
+# Keycloak — Authorization Server (vía gateway mTLS)
 
-Entorno local de **Keycloak 26.2.5** con **PostgreSQL 16**, pensado para desarrollo en **localhost** con Docker Desktop.
+Entorno local de **Keycloak 26.2.5** con **PostgreSQL 16**, expuesto únicamente a través del **gateway Nginx** con mTLS obligatorio.
 
-## Qué incluye
+## Stack
 
-- **Keycloak** como Authorization Server (OAuth 2.0 / OpenID Connect)
-- **PostgreSQL** persistente (los datos sobreviven reinicios)
-- Import automático del realm **`sfa-poc`** al arrancar
-- Features habilitadas: **PAR** y **DPoP** (preparación FAPI)
-
-
-| Contenedor | Servicio | Puertos |
+| Contenedor | Servicio | Acceso host |
 |---|---|---|
-| `sfa-postgres` | PostgreSQL | 5432 (interno) |
-| `sfa-keycloak` | Keycloak | 8080, 9000 |
+| `sfa-mTLS-postgres` | PostgreSQL | interno |
+| `sfa-mTLS-keycloak` | Keycloak | interno (`:8080`) |
+| `sfa-mTLS-resource-server` | API NestJS | interno (`:9090`) |
+| `sfa-mTLS-gateway` | Nginx mTLS | **8443** (AS), **9443** (API) |
 
+Añade a `/etc/hosts`:
 
-Respuesta esperada: `"status": "UP"`.
+```text
+127.0.0.1 sfa.localtest.me api.localtest.me
+```
 
-### Consola de administración
+## Preparación
+
+```bash
+cd clientRegistrationPolicy && ./scripts/generate-root-ca.sh
+cd ../gateway && ./scripts/generate-gateway-certs.sh
+docker compose up -d --build
+```
+
+Ver [`../gateway/README.md`](../gateway/README.md) para pruebas mTLS con `transport.crt`.
+
+## Consola de administración
 
 | Campo | Valor |
 |---|---|
-| URL | http://sfa.localtest.me:8080/admin |
+| URL | https://sfa.localtest.me:8443/admin/master/console/ |
 | Usuario | `admin` |
 | Password | `admin_local_dev` |
 
-### OpenID Discovery (realm importado)
+Requiere **certificado de cliente mTLS** en el navegador (Nginx rechaza con `400 No required SSL certificate was sent` si Chrome no lo presenta).
+
+### macOS (Chrome / Safari)
 
 ```bash
-curl -s http://sfa.localtest.me:8080/realms/sfa-poc/.well-known/openid-configuration | python3 -m json.tool
+cd clientRegistrationPolicy
+./scripts/generate-transport-p12.sh          # usa SSA_SOFTWARE_ID de ssa.env
+./scripts/import-transport-p12-macos.sh    # importa p12 + CA y habilita Chrome
 ```
 
-## Realm `sfa-poc` (import automático)
+Cierra Chrome por completo (`Cmd+Q`) y abre de nuevo la URL. El script usa un **llavero dedicado `sfa-mtls-poc`** (sin contraseña) para evitar el prompt del llavero Inicio de sesión al elegir el certificado.
 
-El archivo `keycloak/import/sfa-mTLS-poc-realm.json` se importa al iniciar Keycloak (`start-dev --import-realm`).
+## Realm `sfa-mtls-poc`
 
-### Clientes OAuth
+Import automático desde `keycloak/import/sfa-mtls-poc-realm.json`.
 
-| Client ID | Tipo | Uso |
+### Clientes OAuth relevantes
+
+| Client ID | Auth | Uso |
 |---|---|---|
-| `tpp-demo` | Confidential | Cliente principal del POC (PAR + PKCE + DPoP) |
-| `tpp-demo-public` | Public | Authorization Code con PKCE sin secret |
-| `tpp-demo-mtls` | X509 | Preparado para `tls_client_auth` |
-| `tpp-demo-m2m` | Confidential + Service Account | `client_credentials` + DPoP (M2M, sin usuario) |
-| `resource-server` | Bearer-only | Audience lógica del API protegido |
+| `LIDER-BCI`, `BANCO-ESTADO` | `client-x509` | TPP mTLS + `client_credentials` por certificado |
+| `tpp-demo-m2m` | `client-secret` | M2M legacy (secret + DPoP) |
+| `resource-server` | Bearer-only | Audience del API |
 
-**Secret de `tpp-demo`:** `tpp-demo-secret-local-dev`
-
-**Secret de `tpp-demo-m2m`:** `tpp-demo-m2m-secret-local-dev`
-
-
-### Usuarios de prueba
-
-| Usuario | Password | Roles principales |
-|---|---|---|
-| `demo-user` | `demo-user-local-dev` | account-viewer, tpp-operator |
-| `admin-poc` | `admin-poc-local-dev` | account-admin, account-viewer, tpp-operator |
-
-### Scopes personalizados
-
-- `accounts:read`
-- `accounts:write`
-- `payments:read`
-
-## Endpoints útiles
+## Endpoints (gateway mTLS)
 
 | Endpoint | URL |
 |---|---|
-| Landing | http://sfa.localtest.me:8080 |
-| Admin Console | http://sfa.localtest.me:8080/admin |
-| Discovery | http://sfa.localtest.me:8080/realms/sfa-poc/.well-known/openid-configuration |
-| Authorization | http://sfa.localtest.me:8080/realms/sfa-poc/protocol/openid-connect/auth |
-| Token | http://sfa.localtest.me:8080/realms/sfa-poc/protocol/openid-connect/token |
-| PAR | http://sfa.localtest.me:8080/realms/sfa-poc/protocol/openid-connect/ext/par/request |
-| JWKS | http://sfa.localtest.me:8080/realms/sfa-poc/protocol/openid-connect/certs |
+| Discovery | https://sfa.localtest.me:8443/realms/sfa-mtls-poc/.well-known/openid-configuration |
+| Token | https://sfa.localtest.me:8443/realms/sfa-mtls-poc/protocol/openid-connect/token |
+| DCR | https://sfa.localtest.me:8443/realms/sfa-mtls-poc/clients-registrations/openid-connect |
+| API health | https://api.localtest.me:9443/health |
+| API cities | https://api.localtest.me:9443/cities |
 
-## Comandos habituales
+Todas las URLs requieren presentar un certificado de cliente emitido por `clientRegistrationPolicy/registro_participantes/ca/root-ca.crt`.
 
-```bash
-# Parar servicios (conserva datos)
-docker compose down
+## Keycloak + Nginx
 
-# Parar y borrar volúmenes (reset total de BD y realms importados)
-docker compose down -v
-
-# Reiniciar solo Keycloak
-docker compose restart keycloak
-
-# Logs en tiempo real
-docker compose logs -f keycloak
-```
+- `KC_HOSTNAME=https://sfa.localtest.me:8443`
+- `KC_PROXY=edge`, `KC_PROXY_HEADERS=xforwarded`
+- `KC_SPI_X509CERT_LOOKUP_PROVIDER=nginx` — lee `ssl-client-cert` reenviado por Nginx
 
 ## Reimportar el realm
-
-Keycloak usa estrategia **`IGNORE_EXISTING`**: si el realm ya existe, **no sobrescribe** cambios del JSON.
-
 
 ```bash
 docker compose down -v
 docker compose up -d
 ```
-Para bci-idp remoto, borra el realm desde http://10.67.245.106:5050/admin y reinicia el contenedor, o recrea el volumen en ese host.
-
-
-
-

@@ -1284,7 +1284,7 @@
         "pkce.code.challenge.method": "S256",
         "tls.client.certificate.bound.access.tokens": "true",
         "x509.allow.regex.pattern.comparison": "false",
-        "x509.subjectdn": "CN=tpp-demo,O=SFA POC,C=CL",
+        "x509.subjectdn": "C=CL,O=SFA POC,CN=tpp-demo",
         "post.logout.redirect.uris": "http://localhost:3000/*",
         "dpop.bound.access.tokens": "true"
       },
@@ -1332,7 +1332,7 @@
         "pkce.code.challenge.method": "S256",
         "tls.client.certificate.bound.access.tokens": "true",
         "x509.allow.regex.pattern.comparison": "false",
-        "x509.subjectdn": "CN=BANCO-ESTADO,O=BANCO-ESTADO,C=CL",
+        "x509.subjectdn": "C=CL,O=BANCO-ESTADO,CN=BANCO-ESTADO",
         "post.logout.redirect.uris": "http://localhost:3000/*",
         "dpop.bound.access.tokens": "true"
       },
@@ -1380,7 +1380,7 @@
         "pkce.code.challenge.method": "S256",
         "tls.client.certificate.bound.access.tokens": "true",
         "x509.allow.regex.pattern.comparison": "false",
-        "x509.subjectdn": "CN=LIDER-BCI,O=LIDER-BCI,C=CL",
+        "x509.subjectdn": "C=CL,O=LIDER-BCI,CN=LIDER-BCI",
         "post.logout.redirect.uris": "http://localhost:3000/*",
         "dpop.bound.access.tokens": "true"
       },
