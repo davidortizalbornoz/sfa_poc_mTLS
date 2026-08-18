@@ -22,6 +22,7 @@ interface KeycloakAccessTokenPayload {
   aud?: string | string[];
   cnf?: {
     jkt?: string;
+    'x5t#S256'?: string;
   };
 }
 
@@ -143,9 +144,11 @@ export class JwtStrategy
     }
 
     const expectedJkt = payload.cnf?.jkt;
-    if (!expectedJkt) {
+    const certThumbprint = payload.cnf?.['x5t#S256'];
+
+    if (!expectedJkt && !certThumbprint) {
       throw new UnauthorizedException(
-        'Access token is not DPoP-bound (missing cnf.jkt)',
+        'Access token is not sender-constrained (missing cnf.jkt or cnf.x5t#S256)',
       );
     }
 
@@ -154,7 +157,8 @@ export class JwtStrategy
       method: request.method,
       url: buildRequestTargetUri(request),
       accessToken,
-      expectedJkt,
+      expectedJkt: expectedJkt ?? '',
+      skipJktValidation: !expectedJkt && !!certThumbprint,
     });
 
     const requiredScope = this.configService.get<string>('REQUIRED_SCOPE');

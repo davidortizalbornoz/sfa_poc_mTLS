@@ -140,8 +140,23 @@ export function buildRequestTargetUri(request: {
     );
   }
 
+  const forwardedProto = request.get('x-forwarded-proto');
+  const protocol = forwardedProto?.split(',')[0]?.trim() || request.protocol;
+  const forwardedHost = request.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const forwardedPort = request.get('x-forwarded-port')?.split(',')[0]?.trim();
+
+  let authority = forwardedHost || host;
+  if (
+    forwardedPort &&
+    !authority.includes(':') &&
+    !((protocol === 'https' && forwardedPort === '443') ||
+      (protocol === 'http' && forwardedPort === '80'))
+  ) {
+    authority = `${authority}:${forwardedPort}`;
+  }
+
   const path = request.originalUrl.split('?')[0].split('#')[0];
-  return normalizeHtu(`${request.protocol}://${host}${path}`);
+  return normalizeHtu(`${protocol}://${authority}${path}`);
 }
 
 export function validateDpopProof(options: {
@@ -150,6 +165,7 @@ export function validateDpopProof(options: {
   url: string;
   accessToken: string;
   expectedJkt: string;
+  skipJktValidation?: boolean;
 }): void {
   const { header, payload, signingInput, signature } = parseDpopProof(
     options.proof,
@@ -158,7 +174,7 @@ export function validateDpopProof(options: {
   verifyProofSignature(header, signingInput, signature);
 
   const proofJkt = computeJwkThumbprint(header.jwk!);
-  if (proofJkt !== options.expectedJkt) {
+  if (!options.skipJktValidation && proofJkt !== options.expectedJkt) {
     throw new UnauthorizedException(
       'DPoP proof key does not match token cnf.jkt',
     );
