@@ -155,16 +155,22 @@ npm run test:e2e
 | TPP callback | 3000 |
 | **Resource Server** | **9090** |
 
-## Validacion DPoP
+## Validacion DPoP + mTLS
 
 El Resource Server verifica:
 
 1. JWT firmado por Keycloak (JWKS, `iss`, `aud`, `exp`, scope)
-2. Token DPoP-bound (`cnf.jkt` presente)
+2. Token DPoP-bound (`cnf.jkt` o `cnf.x5t#S256`)
 3. Proof DPoP (`typ: dpop+jwt`, firma ES256/RS256)
 4. `htm` y `htu` coinciden con la request
 5. `ath` = SHA-256 base64url del access token
-6. Thumbprint de la clave del proof = `cnf.jkt`
+6. Si el token trae `cnf.jkt`: thumbprint de la clave del proof = `cnf.jkt`
+7. **mTLS (headers reenviados por Nginx):**
+   - `ssl-client-verify` = `SUCCESS`
+   - `CN` del certificado presentado = `azp` del token
+   - Si el token trae `cnf.x5t#S256`: thumbprint SHA-256 del certificado = `cnf.x5t#S256`
+
+Variable `MTLS_CLIENT_CERT_REQUIRED=true` (default en Docker). Ponla en `false` solo para pruebas directas a `:9090` sin gateway.
 
 ## Solución de problemas
 
@@ -176,6 +182,7 @@ El Resource Server verifica:
 - Confirma que la audience del JWT sea `resource-server`.
 - Revisa que `KEYCLOAK_ISSUER` coincida exactamente con el claim `iss` del token.
 - El `htu` del proof debe coincidir con la URL exacta (ej. `http://localhost:9090/cities`).
+- El certificado mTLS en Postman debe ser del **mismo cliente** que emitió el token (`azp`). Si usas token de `BANCO-ESTADO`, el cert debe ser `BANCO-ESTADO/transport.crt`, no otro TPP.
 
 ### Keycloak no responde / error JWKS
 

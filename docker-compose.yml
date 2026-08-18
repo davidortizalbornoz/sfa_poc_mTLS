@@ -97,6 +97,7 @@ services:
       KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/sfa-mtls-poc/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: resource-server
       REQUIRED_SCOPE: accounts:read
+      MTLS_CLIENT_CERT_REQUIRED: "true"
     expose:
       - "9090"
     depends_on:

@@ -11,6 +11,7 @@ import type { Request } from 'express';
 import { passportJwtSecret } from 'jwks-rsa';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { buildRequestTargetUri, validateDpopProof } from './dpop.validator';
+import { validateMtlsClientCert } from './mtls-client.validator';
 import { AuthenticatedUser } from './authenticated-user.interface';
 
 interface KeycloakAccessTokenPayload {
@@ -159,6 +160,20 @@ export class JwtStrategy
       accessToken,
       expectedJkt: expectedJkt ?? '',
       skipJktValidation: !expectedJkt && !!certThumbprint,
+    });
+
+    if (!payload.azp) {
+      throw new UnauthorizedException('Access token missing authorized party (azp)');
+    }
+
+    const mtlsRequired =
+      this.configService.get<string>('MTLS_CLIENT_CERT_REQUIRED') !== 'false';
+
+    validateMtlsClientCert({
+      headers: request.headers,
+      azp: payload.azp,
+      expectedCertThumbprint: certThumbprint,
+      required: mtlsRequired,
     });
 
     const requiredScope = this.configService.get<string>('REQUIRED_SCOPE');
