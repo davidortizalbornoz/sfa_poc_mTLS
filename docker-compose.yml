@@ -26,7 +26,7 @@ services:
     image: quay.io/keycloak/keycloak:26.2.5
     container_name: sfa-mTLS-keycloak
     labels:
-      - "project=sfa-poc"
+      - "project=sfa-mTLS-poc"
     env_file:
       - .env
     command: start-dev --import-realm
@@ -44,23 +44,31 @@ services:
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
 
       KC_HTTP_ENABLED: "true"
+      KC_PROXY: edge
+      KC_PROXY_HEADERS: xforwarded
 
       KC_HEALTH_ENABLED: "true"
       KC_METRICS_ENABLED: "true"
 
       KC_LOG_LEVEL: info
 
-      # FAPI: PAR y DPoP (requeridos en fases posteriores)
       KC_FEATURES: par,dpop
 
-    ports:
-      - "8080:8080"
-      - "9000:9000"
+      # Certificado cliente reenviado por Nginx (tls_client_auth / client-x509)
+      KC_SPI_X509CERT_LOOKUP_PROVIDER: nginx
+      KC_SPI_X509CERT_LOOKUP_NGINX_SSL_CLIENT_CERT: ssl-client-cert
+      KC_SPI_X509CERT_LOOKUP_NGINX_CERT_IS_URL_ENCODED: "true"
+      KC_TRUSTSTORE_PATHS: /opt/keycloak/truststores/root-ca.crt
+
+    expose:
+      - "8080"
+      - "9000"
     volumes:
       - ./keycloak/import/sfa-mtls-poc-realm.json:/opt/keycloak/data/import/sfa-mtls-poc-realm.json
       - ./clientRegistrationPolicy/registro_participantes/directory-jwks.json:/opt/keycloak/data/test-directory-jwks.json:ro
       - ./clientRegistrationPolicy/client-jwks:/opt/keycloak/data/client-jwks:ro
       - ./clientRegistrationPolicy/target/sfa-software-statement-policy-1.0.0-SNAPSHOT.jar:/opt/keycloak/providers/sfa-software-statement-policy.jar:ro
+      - ./clientRegistrationPolicy/registro_participantes/ca/root-ca.crt:/opt/keycloak/truststores/root-ca.crt:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,6 +82,58 @@ services:
       resources:
         limits:
           memory: 2G
+    restart: unless-stopped
+
+  resource-server:
+    build:
+      context: ./resource_server
+      dockerfile: Dockerfile
+    container_name: sfa-mTLS-resource-server
+    labels:
+      - "project=sfa-mTLS-poc"
+    environment:
+      PORT: "9090"
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER}
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/sfa-mtls-poc/protocol/openid-connect/certs
+      KEYCLOAK_AUDIENCE: resource-server
+      REQUIRED_SCOPE: accounts:read
+    expose:
+      - "9090"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:9090/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  gateway:
+    image: nginx:1.27-alpine
+    container_name: sfa-mTLS-gateway
+    labels:
+      - "project=sfa-mTLS-poc"
+    ports:
+      - "8443:8443"
+      - "9443:9443"
+    volumes:
+      - ./gateway/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./gateway/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./gateway/certs:/etc/nginx/certs:ro
+      - ./clientRegistrationPolicy/registro_participantes/ca/root-ca.crt:/etc/nginx/ca/root-ca.crt:ro
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      resource-server:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

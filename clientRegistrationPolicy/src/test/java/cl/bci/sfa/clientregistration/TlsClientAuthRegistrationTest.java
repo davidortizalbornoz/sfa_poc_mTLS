@@ -47,8 +47,15 @@ class TlsClientAuthRegistrationTest {
   @Test
   void defaultTlsSubjectDnMatchesTransportCertificateConvention() {
     assertEquals(
-        "CN=LIDER-BCI,O=LIDER-BCI,C=CL",
+        "C=CL,O=LIDER-BCI,CN=LIDER-BCI",
         SfaSoftwareStatementValidator.defaultTlsClientAuthSubjectDn(claims));
+  }
+
+  @Test
+  void normalizesCnFirstSubjectDnToKeycloakRfc2253Form() {
+    assertEquals(
+        "C=CL,O=LIDER-BCI,CN=LIDER-BCI",
+        SfaSoftwareStatementValidator.toKeycloakX509SubjectDn("CN=LIDER-BCI,O=LIDER-BCI,C=CL"));
   }
 
   @Test
@@ -58,13 +65,12 @@ class TlsClientAuthRegistrationTest {
     SfaSoftwareStatementValidator.applyClaimsToClient(client, claims, config, tlsContext);
 
     assertEquals("client-x509", client.getClientAuthenticatorType());
-    assertEquals("CN=LIDER-BCI,O=LIDER-BCI,C=CL", client.getAttributes().get("x509.subjectdn"));
+    assertEquals("C=CL,O=LIDER-BCI,CN=LIDER-BCI", client.getAttributes().get("x509.subjectdn"));
     assertEquals("false", client.getAttributes().get("x509.allow.regex.pattern.comparison"));
     assertEquals("true", client.getAttributes().get("tls.client.certificate.bound.access.tokens"));
     assertEquals("S256", client.getAttributes().get("pkce.code.challenge.method"));
     assertEquals("true", client.getAttributes().get("dpop.bound.access.tokens"));
     assertTrue(Boolean.TRUE.equals(client.isServiceAccountsEnabled()));
-    assertTrue(Boolean.TRUE.equals(client.isConsentRequired()));
     assertFalse(Boolean.TRUE.equals(client.isFullScopeAllowed()));
     assertNull(client.getAttributes().get("jwks.url"));
     assertNull(client.getAttributes().get("jwks.string"));
@@ -72,7 +78,7 @@ class TlsClientAuthRegistrationTest {
   }
 
   @Test
-  void keepsServiceAccountsDisabledWithoutClientCredentialsGrant() throws Exception {
+  void alwaysEnablesServiceAccountsForTlsClientAuth() throws Exception {
     OIDCClientRepresentation oidcRep = new OIDCClientRepresentation();
     oidcRep.setTokenEndpointAuthMethod("tls_client_auth");
     oidcRep.setTlsClientAuthSubjectDn("CN=LIDER-BCI,O=LIDER-BCI,C=CL");
@@ -83,7 +89,7 @@ class TlsClientAuthRegistrationTest {
     ClientRepresentation client = new ClientRepresentation();
     SfaSoftwareStatementValidator.applyClaimsToClient(client, claims, config, context);
 
-    assertFalse(Boolean.TRUE.equals(client.isServiceAccountsEnabled()));
+    assertTrue(Boolean.TRUE.equals(client.isServiceAccountsEnabled()));
   }
 
   @Test

@@ -1,12 +1,20 @@
 
 PAUTA DE EJECUCION PARA REGISTRO DE FINTECH A TRAVES DE DCR & SSA
 
+>> /etc/hosts
+127.0.0.1 sfa.localtest.me api.localtest.me
+
+>> Preparar PKI + gateway (una vez)
+cd clientRegistrationPolicy && ./scripts/generate-root-ca.sh && ./scripts/generate-client-jwks.sh
+cd ../gateway && ./scripts/generate-gateway-certs.sh
+docker compose up -d --build
+
 >>Definir contenidos para las variables en ssa.env
 
 SSA_ISSUER=https://directorio-qa.finanzasabiertas.cl
-SSA_SOFTWARE_ID=LIDER-BCI
-SSA_ORGANISATION_ID="LIDER-BCI"
-SSA_SOFTWARE_JWKS_URI=https://fintech-lider-bci.localtest.me/.well-known/jwks.json
+SSA_SOFTWARE_ID=MATCH-BCI
+SSA_ORGANISATION_ID="MATCH-BCI"
+SSA_SOFTWARE_JWKS_URI=https://fintech-match-bci.localtest.me/.well-known/jwks.json
 SSA_SOFTWARE_CLIENT_NAME="SFA mTLS POC - DCR + SSA"
 SSA_SOFTWARE_VERSION=1.2.9
 SSA_REDIRECT_URIS=http://localhost:3000/callback
@@ -16,63 +24,39 @@ SSA_JWT_KID=sfa-poc-directory-1
 
 ./scripts/build-provider.sh
 
->>GENERAR JWKS PARA FINTECHS
-
-Ext_DHOrtizA@CLFTCMYPC6YVNJ9 clientRegistrationPolicy % ./scripts/generate-client-jwks.sh
-client-jwks/LIDER-BCI/jwks.json
-kid=lider-bci-xxxxxxxxxxxx
-private_key=client-jwks/LIDER-BCI/private.pem
-transport_cert=client-jwks/LIDER-BCI/transport.crt
-_______________________________________________________________________
-
-
 >>GENERAR SSA PARA REGISTRO DE FINTECH
-Ext_DHOrtizA@CLFTCMYPC6YVNJ9 clientRegistrationPolicy % ./scripts/generate-test-ssa.sh
+cd clientRegistrationPolicy
+SSA=$(./scripts/generate-test-ssa.sh)
 
-eyJhbGciOiJQUzI1NiIs...
-guardado en registro_participantes/sample-software-statement.jwt
-
-_______________________________________________________________________
-
-
->> REGISTRO DE FINTECH EN AUTHORIZATION SERVER (realm sfa-mtls-poc)
-Perfil TPP mTLS/X509: autenticacion en /token via certificado de transporte (tls_client_auth).
-Incluye client_credentials para M2M sin client_assertion ni private_key_jwt.
-
-curl --location 'http://127.0.0.1:8080/realms/sfa-mtls-poc/clients-registrations/openid-connect' \
---header 'Content-Type: application/json' \
---header 'X-Software-Statement: $SSA' \
---data '{
+>> REGISTRO DCR + SSA (gateway mTLS :8443)
+curl --cert client-jwks/MATCH-BCI/transport.crt \
+     --key client-jwks/MATCH-BCI/transport.key \
+     --cacert registro_participantes/ca/root-ca.crt \
+     --location 'https://sfa.localtest.me:8443/realms/sfa-mtls-poc/clients-registrations/openid-connect' \
+     --header 'Content-Type: application/json' \
+     --header "X-Software-Statement: $SSA" \
+     --data '{
     "grant_types": ["authorization_code", "refresh_token", "client_credentials"],
     "response_types": ["code"],
     "token_endpoint_auth_method": "tls_client_auth",
-    "tls_client_auth_subject_dn": "CN=LIDER-BCI,O=LIDER-BCI,C=CL",
+    "tls_client_auth_subject_dn": "C=CL,O=MATCH-BCI,CN=MATCH-BCI",
     "tls_client_certificate_bound_access_tokens": true,
     "redirect_uris": ["http://localhost:3000/callback"],
     "scope": "accounts:read"
   }'
 
-El tls_client_auth_subject_dn debe coincidir con el Subject de transport.crt:
-  openssl x509 -in client-jwks/LIDER-BCI/transport.crt -noout -subject
-
-_______________________________________________________________________
-
-
->> TOKEN client_credentials CON CERTIFICADO X509 (sin client_assertion)
-Requiere que el endpoint /token exija mTLS y Keycloak valide el certificado contra x509.subjectdn.
-En produccion suele haber un reverse proxy (Envoy/Nginx) que termina TLS y reenvia el certificado.
-
-curl --cert client-jwks/LIDER-BCI/transport.crt \
-     --key client-jwks/LIDER-BCI/transport.key \
+>> TOKEN client_credentials (certificado X509, sin client_assertion)
+curl --cert client-jwks/MATCH-BCI/transport.crt \
+     --key client-jwks/MATCH-BCI/transport.key \
      --cacert registro_participantes/ca/root-ca.crt \
-     --location 'https://<host-mtls>/realms/sfa-mtls-poc/protocol/openid-connect/token' \
+     --location 'https://sfa.localtest.me:8443/realms/sfa-mtls-poc/protocol/openid-connect/token' \
      --header 'Content-Type: application/x-www-form-urlencoded' \
      --data-urlencode 'grant_type=client_credentials' \
-     --data-urlencode 'client_id=LIDER-BCI' \
+     --data-urlencode 'client_id=MATCH-BCI' \
      --data-urlencode 'scope=accounts:read'
 
-Notas:
-- No se envia client_assertion ni client_secret: la autenticacion es el certificado TLS.
-- tls_client_certificate_bound_access_tokens=true ata el access token al certificado presentado.
-- Keycloak en docker-compose actual (HTTP :8080) no termina mTLS; esta llamada aplica cuando
-  el AS/Gateway exponga HTTPS con clientAuth y confie en registro_participantes/ca/root-ca.crt.
+>> API Resource Server (gateway mTLS :9443)
+curl --cert client-jwks/MATCH-BCI/transport.crt \
+     --key client-jwks/MATCH-BCI/transport.key \
+     --cacert registro_participantes/ca/root-ca.crt \
+     https://api.localtest.me:9443/health

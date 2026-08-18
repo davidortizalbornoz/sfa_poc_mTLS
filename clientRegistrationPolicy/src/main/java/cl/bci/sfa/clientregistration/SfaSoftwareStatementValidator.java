@@ -4,9 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import javax.security.auth.x500.X500Principal;
 import org.keycloak.common.util.Time;
 import org.keycloak.component.ComponentModel;
 import org.keycloak.crypto.AsymmetricSignatureVerifierContext;
@@ -28,6 +31,21 @@ public final class SfaSoftwareStatementValidator {
   private static final String CLIENT_AUTHENTICATOR_JWT = "client-jwt";
   private static final Set<String> JWKS_ATTRIBUTE_KEYS =
       Set.of("jwks.url", "use.jwks.url", "use.jwks.string", "jwks.string");
+
+  // Debe coincidir con X509ClientAuthenticator (RFC8705 / RFC2253 exact match).
+  private static final Map<String, String> X509_CUSTOM_OIDS = new HashMap<>();
+  private static final Map<String, String> X509_CUSTOM_OIDS_REVERSED = new HashMap<>();
+
+  static {
+    X509_CUSTOM_OIDS.put("2.5.4.5", "serialNumber".toUpperCase());
+    X509_CUSTOM_OIDS.put("2.5.4.15", "businessCategory".toUpperCase());
+    X509_CUSTOM_OIDS.put("1.3.6.1.4.1.311.60.2.1.3", "jurisdictionCountryName".toUpperCase());
+    X509_CUSTOM_OIDS.put("1.2.840.113549.1.9.1", "emailAddress".toUpperCase());
+    for (Map.Entry<String, String> entry : X509_CUSTOM_OIDS.entrySet()) {
+      X509_CUSTOM_OIDS_REVERSED.put(entry.getValue(), entry.getKey());
+    }
+    X509_CUSTOM_OIDS_REVERSED.put("E", "1.2.840.113549.1.9.1");
+  }
 
   private SfaSoftwareStatementValidator() {}
 
@@ -210,7 +228,7 @@ public final class SfaSoftwareStatementValidator {
     }
 
     String expectedSubjectDn = defaultTlsClientAuthSubjectDn(claims);
-    if (!expectedSubjectDn.equals(subjectDn)) {
+    if (!sameX509SubjectDn(subjectDn, expectedSubjectDn)) {
       throw new ClientRegistrationPolicyException(
           "tls_client_auth_subject_dn must match transport certificate subject: "
               + expectedSubjectDn);
@@ -278,7 +296,7 @@ public final class SfaSoftwareStatementValidator {
     Boolean certificateBoundTokens =
         OidcContextReader.getTlsClientCertificateBoundAccessTokens(context);
 
-    client.getAttributes().put("x509.subjectdn", subjectDn);
+    client.getAttributes().put("x509.subjectdn", toKeycloakX509SubjectDn(subjectDn));
     client.getAttributes().put("x509.allow.regex.pattern.comparison", "false");
     client.getAttributes()
         .put(
@@ -290,14 +308,27 @@ public final class SfaSoftwareStatementValidator {
     client.getAttributes().remove("token.endpoint.auth.signing.alg");
     client.getAttributes().remove("request.object.signature.alg");
 
-    client.setServiceAccountsEnabled(OidcContextReader.requestsClientCredentials(context));
+    client.setServiceAccountsEnabled(true);
     client.setConsentRequired(true);
     client.setFullScopeAllowed(false);
     client.setClientAuthenticatorType(CLIENT_AUTHENTICATOR_X509);
   }
 
   static String defaultTlsClientAuthSubjectDn(SfaSoftwareStatementClaims claims) {
-    return "CN=" + claims.getSoftwareId() + ",O=" + claims.getOrganisationId() + ",C=CL";
+    // Mismo orden que openssl -subj "/CN=.../O=.../C=CL" → RFC2253 C,O,CN en Keycloak.
+    return "C=CL,O="
+        + claims.getOrganisationId()
+        + ",CN="
+        + claims.getSoftwareId();
+  }
+
+  static String toKeycloakX509SubjectDn(String subjectDn) {
+    X500Principal principal = new X500Principal(subjectDn.trim(), X509_CUSTOM_OIDS_REVERSED);
+    return principal.getName(X500Principal.RFC2253, X509_CUSTOM_OIDS);
+  }
+
+  static boolean sameX509SubjectDn(String left, String right) {
+    return toKeycloakX509SubjectDn(left).equals(toKeycloakX509SubjectDn(right));
   }
 
   private static String resolveTlsClientAuthSubjectDn(
