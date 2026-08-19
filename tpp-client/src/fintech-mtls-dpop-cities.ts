@@ -5,7 +5,7 @@ import type { TokenResponse } from "./types.js";
 
 async function fetchAccessToken(
   config: ReturnType<typeof loadMtlsClientConfig>,
-): Promise<string> {
+): Promise<{ accessToken: string; tokenCurl: string }> {
   const dpopKeys = createDpopKeyPair();
   const dpopProof = createDpopProof({
     privateKey: dpopKeys.privateKey,
@@ -19,6 +19,18 @@ async function fetchAccessToken(
     client_id: config.clientId,
     scope: config.scope,
   }).toString();
+
+  const tokenCurl = buildMtlsCurlCommand({
+    config,
+    method: "POST",
+    url: config.tokenEndpoint,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+      DPoP: dpopProof,
+    },
+    body,
+  });
 
   const raw = runMtlsCurl({
     config,
@@ -49,12 +61,17 @@ async function fetchAccessToken(
     `Token obtenido (${config.clientId}, expires_in=${tokens.expires_in ?? "?"}s)`,
   );
 
-  return tokens.access_token;
+  return { accessToken: tokens.access_token, tokenCurl };
 }
 
 async function main(): Promise<void> {
   const config = loadMtlsClientConfig();
-  const accessToken = await fetchAccessToken(config);
+  const { accessToken, tokenCurl } = await fetchAccessToken(config);
+
+  console.error("");
+  console.error("curl POST /token (usado por el script; proof DPoP ya consumido):");
+  console.log(tokenCurl);
+  console.error("");
 
   const dpopKeys = createDpopKeyPair();
   const dpopProof = createDpopProof({

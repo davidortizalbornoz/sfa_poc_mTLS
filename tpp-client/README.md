@@ -27,7 +27,8 @@ npm run fintech-mtls-dpop-cities
 ```
 
 1. **Obtiene el token** en Keycloak (`POST /token` con mTLS + DPoP, sin `client_assertion`).
-2. **Imprime solo el curl** de `GET /cities` listo para copiar en Postman (no llama al resource server).
+2. **Imprime el curl** de `POST /token` usado (referencia; el proof ya fue consumido).
+3. **Imprime el curl** de `GET /cities` listo para copiar en Postman (no llama al resource server).
 
 El curl incluye:
 
